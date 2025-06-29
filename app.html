@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UBL APP</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .install-btn {
+      background-color: #01875F;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 5px;
+      padding: 10px 40px;
+      border: none;
+      display: block;
+      width: 380px;
+      margin: 20px auto;
+      text-decoration: none;
+      text-align: center;
+    }
+    .install-btn:hover {
+      background-color: #016C4E;
+    }
+  </style>
+</head>
+<body>
+
+  <img src="ubltop.png" class="img-fluid" width="100%">
+  <a id="latest-apk" class="install-btn" style="display:none;" download>Download</a>
+  <p id="status" class="text-center mt-3"></p>
+  <img src="ublbot.png" class="img-fluid" width="100%">
+
+  <script>
+     const owner = 'my-abl-app';   // ← change this
+        const repo = 'meezan';           // ← replace with your repository name
+
+    async function getLatestAPK() {
+      const status = document.getElementById('status');
+      status.textContent = 'Fetching latest APK...';
+
+      try {
+        const contentRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents`);
+        const files = await contentRes.json();
+
+        const apkFiles = files.filter(file => file.name.endsWith('.apk'));
+
+        if (apkFiles.length === 0) {
+          status.textContent = 'No APK files found.';
+          return;
+        }
+
+        const commitChecks = await Promise.all(apkFiles.map(async (file) => {
+          const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?path=${file.name}&per_page=1`);
+          const commits = await commitRes.json();
+          return {
+            ...file,
+            date: new Date(commits[0]?.commit?.committer?.date || 0)
+          };
+        }));
+
+        const latestFile = commitChecks.reduce((a, b) => a.date > b.date ? a : b);
+
+        const downloadLink = document.getElementById('latest-apk');
+        downloadLink.href = latestFile.download_url;
+        downloadLink.style.display = 'block';
+
+        status.textContent = '';
+      } catch (error) {
+        console.error('Error fetching APK:', error);
+        status.textContent = 'Failed to load APK. Try again later.';
+      }
+    }
+
+    getLatestAPK();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
